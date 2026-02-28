@@ -22,7 +22,7 @@ SCREEN_WIDTH = GRID_WIDTH * TILE_SIZE
 SCREEN_HEIGHT = GRID_HEIGHT * TILE_SIZE
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("ZATHURA // METEOR FIELD - STATIC")
+pygame.display.set_caption("AI Project: Zombie Survival - Phase 0 - Final Environment Setup - Zathura Edition")
 clock = pygame.time.Clock()
 
 ## Grid

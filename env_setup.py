@@ -32,7 +32,7 @@ player_pos = [2, 4]
 # --- 3. Pygame Setup (The Eyes) ---
 pygame.init()
 screen = pygame.display.set_mode((GRID_WIDTH * TILE_SIZE, GRID_HEIGHT * TILE_SIZE))
-pygame.display.set_caption("AI Project: Zombie Survival - Phase 0")
+pygame.display.set_caption("AI Project: Zombie Survival - Phase 0 - Initial Environment Setup")
 clock = pygame.time.Clock()
 
 # --- 4. Main Game Loop ---
