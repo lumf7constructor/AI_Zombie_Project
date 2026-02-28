@@ -6,7 +6,7 @@ from config import (
     BG_COLOR, WALL_COLOR, PLAYER_COLOR, GOAL_COLOR, GRID_LINE_COLOR,
     GRID, PLAYER_START_POS, GOAL_POS
 )
-from utils import get_bfs_path
+from utils import get_astar_path
 
 # --- Configuration ---
 # (All imported from config.py)
@@ -19,12 +19,12 @@ goal_pos = GOAL_POS.copy()
 pygame.init()
 PANEL_HEIGHT = 60  # Space for UI panel at the top
 screen = pygame.display.set_mode((GRID_WIDTH * TILE_SIZE, GRID_HEIGHT * TILE_SIZE + PANEL_HEIGHT))
-pygame.display.set_caption("AI Phase 1: BFS Search")
+pygame.display.set_caption("AI Phase 1: A* Search")
 clock = pygame.time.Clock()
 
 # Calculate the path once at the beginning
 start_time = time.time()
-calculated_path = get_bfs_path(player_pos, goal_pos, GRID)
+calculated_path = get_astar_path(player_pos, goal_pos, GRID)
 end_time = time.time()
 algorithm_time = end_time - start_time
 path_index = 0
@@ -56,7 +56,7 @@ while running:
     
     # Display timing info in the panel
     font = pygame.font.Font(None, 32)
-    timer_text = font.render(f"BFS Time: {algorithm_time:.4f}s | Path: {len(calculated_path)} steps", True, PLAYER_COLOR)
+    timer_text = font.render(f"A* Time: {algorithm_time:.4f}s | Path: {len(calculated_path)} steps", True, PLAYER_COLOR)
     screen.blit(timer_text, (15, 15))
     
     # Draw grid with offset for panel
@@ -77,4 +77,3 @@ while running:
     clock.tick(FPS)
 
 pygame.quit()
-

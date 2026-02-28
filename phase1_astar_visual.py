@@ -1,33 +1,39 @@
 import pygame
 import random
+import sys
+import time
 from config import (
-    TILE_SIZE, GRID_WIDTH, GRID_HEIGHT,
-    GRID, PLAYER_START_POS,
+    TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, FPS,
+    GRID, PLAYER_START_POS, GOAL_POS,
     BLACK, DARK_GRAY, MED_GRAY, LIGHT_GRAY,
     RED, DARK_RED, PURPLE, DARK_PURPLE,
     PRIZE_GOLD, DARK_GOLD
 )
+from utils import get_astar_path
 
 pygame.init()
 
 SCREEN_WIDTH = GRID_WIDTH * TILE_SIZE
 SCREEN_HEIGHT = GRID_HEIGHT * TILE_SIZE
+PANEL_HEIGHT = 60  # Space for UI panel at the top
 
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("AI Project: Zombie Survival - Phase 0 - Final Environment Setup - Zathura Edition")
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + PANEL_HEIGHT))
+pygame.display.set_caption("AI Phase 1: A* Search - Visual Edition")
 clock = pygame.time.Clock()
 
-## Grid (create mutable copy)
+# Grid (create mutable copy)
 grid = [row[:] for row in GRID]
 
-monster_pos = PLAYER_START_POS.copy()
-grid[monster_pos[1]][monster_pos[0]] = 2
+# Positions [x, y]
+player_pos = PLAYER_START_POS.copy()
+goal_pos = GOAL_POS.copy()
 
+# Find prize position in grid
 prize_pos = None
 for row in range(GRID_HEIGHT):
     for col in range(GRID_WIDTH):
         if grid[row][col] == 3:
-            prize_pos = (col, row)  # Store as [x, y]
+            prize_pos = (col, row)
             break
     if prize_pos:
         break
@@ -75,11 +81,11 @@ def draw_meteor(x, y):
     pygame.draw.line(screen, (20, 20, 20), (x+35, y+25), (x+45, y+40), 2)
     pygame.draw.line(screen, (20, 20, 20), (x+20, y+45), (x+30, y+55), 2)
 
-# MONSTER VISUALS
-def draw_monster(x, y):
+# PLAYER VISUALS
+def draw_player(x, y):
     center = (x + TILE_SIZE//2, y + TILE_SIZE//2)
     
-    # Body
+    # Body (light blue)
     body_points = [
         (center[0] - 18, center[1] - 10),  
         (center[0] + 18, center[1] - 10),  
@@ -88,8 +94,8 @@ def draw_monster(x, y):
         (center[0] - 15, center[1] + 14),  
         (center[0] - 22, center[1] + 3),   
     ]
-    pygame.draw.polygon(screen, PURPLE, body_points)
-    pygame.draw.polygon(screen, DARK_PURPLE, body_points, 2)
+    pygame.draw.polygon(screen, (0, 150, 255), body_points)
+    pygame.draw.polygon(screen, (0, 100, 200), body_points, 2)
     
     # Head
     head_points = [
@@ -98,40 +104,14 @@ def draw_monster(x, y):
         (center[0] + 7, center[1] - 7),
         (center[0] - 7, center[1] - 7),
     ]
-    pygame.draw.polygon(screen, (100, 30, 140), head_points)
+    pygame.draw.polygon(screen, (0, 120, 200), head_points)
     
     # Eyes
-    pygame.draw.circle(screen, RED, (center[0] - 6, center[1] - 14), 3)
-    pygame.draw.circle(screen, RED, (center[0] + 6, center[1] - 14), 3)
+    pygame.draw.circle(screen, (255, 255, 255), (center[0] - 6, center[1] - 14), 3)
+    pygame.draw.circle(screen, (255, 255, 255), (center[0] + 6, center[1] - 14), 3)
     # Pupils
-    pygame.draw.circle(screen, (255, 200, 200), (center[0] - 6, center[1] - 14), 1)
-    pygame.draw.circle(screen, (255, 200, 200), (center[0] + 6, center[1] - 14), 1)
-    
-    # Horns
-    pygame.draw.polygon(screen, DARK_PURPLE, [
-        (center[0] - 9, center[1] - 22),
-        (center[0] - 13, center[1] - 28),
-        (center[0] - 4, center[1] - 24)
-    ])
-    pygame.draw.polygon(screen, DARK_PURPLE, [
-        (center[0] + 9, center[1] - 22),
-        (center[0] + 13, center[1] - 28),
-        (center[0] + 4, center[1] - 24)
-    ])
-    
-    # Spikes
-    spike_positions = [
-        (center[0] - 11, center[1] - 7),
-        (center[0] - 4, center[1] - 9),
-        (center[0] + 4, center[1] - 9),
-        (center[0] + 11, center[1] - 7)
-    ]
-    for sx, sy in spike_positions:
-        pygame.draw.polygon(screen, DARK_PURPLE, [
-            (sx, sy),
-            (sx - 4, sy + 6),
-            (sx + 4, sy + 6)
-        ])
+    pygame.draw.circle(screen, (0, 0, 0), (center[0] - 6, center[1] - 14), 1)
+    pygame.draw.circle(screen, (0, 0, 0), (center[0] + 6, center[1] - 14), 1)
 
 # PRIZE
 def draw_prize(x, y):
@@ -148,66 +128,51 @@ def draw_prize(x, y):
     pygame.draw.polygon(screen, PRIZE_GOLD, points)
     pygame.draw.polygon(screen, DARK_GOLD, points, 2)
 
-# GRID
-def draw_grid():
-    for row in range(GRID_HEIGHT):
-        for col in range(GRID_WIDTH):
-            x = col * TILE_SIZE
-            y = row * TILE_SIZE
-            tile = grid[row][col]
-            
-            if tile == 0 or tile == 2:
-                pygame.draw.rect(screen, BLACK, (x, y, TILE_SIZE, TILE_SIZE))
-            
-            elif tile == 1:
-                draw_meteor(x, y)
-            
-            elif tile == 3:
-                draw_prize(x, y)
-            
-            pygame.draw.rect(screen, (40, 40, 30), (x, y, TILE_SIZE, TILE_SIZE), 1)
+# Calculate the path once at the beginning using A*
+start_time = time.time()
+calculated_path = get_astar_path(player_pos, goal_pos, GRID)
+end_time = time.time()
+algorithm_time = end_time - start_time
+path_index = 0
 
-
-# MAIN
+# --- Main Loop ---
 running = True
-
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-        elif event.type == pygame.KEYDOWN and not prize_found:
-            target_x, target_y = monster_pos[0], monster_pos[1]
-            
-            if event.key == pygame.K_UP:
-                target_y -= 1
-            elif event.key == pygame.K_DOWN:
-                target_y += 1
-            elif event.key == pygame.K_LEFT:
-                target_x -= 1
-            elif event.key == pygame.K_RIGHT:
-                target_x += 1
+    # Move the agent automatically along the calculated path
+    if path_index < len(calculated_path):
+        player_pos = list(calculated_path[path_index])
+        path_index += 1
+        
+        # Check if reached prize
+        if prize_pos and player_pos == list(prize_pos):
+            prize_found = True
 
-            if (0 <= target_x < GRID_WIDTH) and (0 <= target_y < GRID_HEIGHT):
-                if grid[target_y][target_x] != 1:
-
-                    if grid[target_y][target_x] == 3:
-                        prize_found = True
-
-                    grid[monster_pos[1]][monster_pos[0]] = 0
-                    grid[target_y][target_x] = 2
-                    monster_pos = [target_x, target_y]
-
+    # Drawing
     screen.fill(BLACK)
 
+    # Draw UI panel at the top
+    pygame.draw.rect(screen, (50, 50, 50), (0, 0, SCREEN_WIDTH, PANEL_HEIGHT))
+    pygame.draw.line(screen, (40, 40, 30), (0, PANEL_HEIGHT), (SCREEN_WIDTH, PANEL_HEIGHT), 2)
+
+    # Display timing info in the panel
+    font = pygame.font.Font(None, 32)
+    timer_text = font.render(f"A* Time: {algorithm_time:.4f}s | Path: {len(calculated_path)} steps", True, PRIZE_GOLD)
+    screen.blit(timer_text, (15, 15))
+
+    # Draw stars
     for s in stars:
         pygame.draw.circle(screen, (s['brightness'], s['brightness'], s['brightness']), 
-                          (int(s['x']), int(s['y'])), s['size'])
+                          (int(s['x']), int(s['y']) + PANEL_HEIGHT), s['size'])
 
+    # Draw grid with offset for panel
     for row in range(GRID_HEIGHT):
         for col in range(GRID_WIDTH):
             x = col * TILE_SIZE
-            y = row * TILE_SIZE
+            y = row * TILE_SIZE + PANEL_HEIGHT
             tile = grid[row][col]
             
             if tile == 1:
@@ -219,20 +184,26 @@ while running:
 
             pygame.draw.rect(screen, (40, 40, 30), (x, y, TILE_SIZE, TILE_SIZE), 1)
     
-    draw_monster(monster_pos[0] * TILE_SIZE, monster_pos[1] * TILE_SIZE)
+    # Draw Player with offset
+    draw_player(player_pos[0] * TILE_SIZE, player_pos[1] * TILE_SIZE + PANEL_HEIGHT)
     
-    # Win
+    # Win condition
     if prize_found:
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT + PANEL_HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 200))
         screen.blit(overlay, (0, 0))
         
         font = pygame.font.Font(None, 48)
         text = font.render("PRIZE CLAIMED", True, PRIZE_GOLD)
-        text_rect = text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2))
+        text_rect = text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + PANEL_HEIGHT//2 - 40))
         screen.blit(text, text_rect)
+        
+        # Show timing in the overlay
+        time_text = font.render(f"Time: {algorithm_time:.4f}s", True, PRIZE_GOLD)
+        time_rect = time_text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + PANEL_HEIGHT//2 + 40))
+        screen.blit(time_text, time_rect)
     
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(FPS)
 
 pygame.quit()

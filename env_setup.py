@@ -1,33 +1,20 @@
 import pygame
 import sys
+from config import (
+    TILE_SIZE, GRID_WIDTH, GRID_HEIGHT,
+    BG_COLOR, WALL_COLOR, PLAYER_COLOR,
+    GRID, PLAYER_START_POS, GRID_LINE_COLOR
+)
 
 # --- 1. Settings & Configuration ---
-TILE_SIZE = 40
-GRID_WIDTH = 15
-GRID_HEIGHT = 10
-
-# Colors (RGB)
-BG_COLOR = (30, 30, 30)
-WALL_COLOR = (100, 100, 100)
-PLAYER_COLOR = (0, 150, 255)
+# (All imported from config.py)
 
 # --- 2. The Logic Grid (The Brain) ---
-# 0 = Empty Space, 1 = Wall
-grid = [
-    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
-]
+# (Shared grid is now in config.py)
+grid = [row[:] for row in GRID]  # Create a mutable copy
 
 # Player starting position [X (Column), Y (Row)]
-player_pos = [2, 4]
+player_pos = PLAYER_START_POS.copy()
 
 # --- 3. Pygame Setup (The Eyes) ---
 pygame.init()
@@ -74,7 +61,7 @@ while running:
             
             # Optional: Draw faint grid lines to see the cells clearly
             line_rect = pygame.Rect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            pygame.draw.rect(screen, (50, 50, 50), line_rect, 1)
+            pygame.draw.rect(screen, GRID_LINE_COLOR, line_rect, 1)
 
     # Draw the Player
     player_rect = pygame.Rect(player_pos[0] * TILE_SIZE, player_pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)

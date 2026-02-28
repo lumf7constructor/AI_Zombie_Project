@@ -2,29 +2,29 @@ import pygame
 import sys
 import time
 from config import (
-    TILE_SIZE, GRID_WIDTH, GRID_HEIGHT, FPS,
+    TILE_SIZE_XLARGE, GRID_WIDTH_XLARGE, GRID_HEIGHT_XLARGE, FPS,
     BG_COLOR, WALL_COLOR, PLAYER_COLOR, GOAL_COLOR, GRID_LINE_COLOR,
-    GRID, PLAYER_START_POS, GOAL_POS
+    GRID_XLARGE, PLAYER_START_POS_XLARGE, GOAL_POS_XLARGE
 )
 from utils import get_bfs_path
 
 # --- Configuration ---
-# (All imported from config.py)
+# (All imported from config.py for extra large grid)
 
 # Positions [x, y]
-player_pos = PLAYER_START_POS.copy()
-goal_pos = GOAL_POS.copy()
+player_pos = PLAYER_START_POS_XLARGE.copy()
+goal_pos = GOAL_POS_XLARGE.copy()
 
 # --- Pygame Setup ---
 pygame.init()
 PANEL_HEIGHT = 60  # Space for UI panel at the top
-screen = pygame.display.set_mode((GRID_WIDTH * TILE_SIZE, GRID_HEIGHT * TILE_SIZE + PANEL_HEIGHT))
-pygame.display.set_caption("AI Phase 1: BFS Search")
+screen = pygame.display.set_mode((GRID_WIDTH_XLARGE * TILE_SIZE_XLARGE, GRID_HEIGHT_XLARGE * TILE_SIZE_XLARGE + PANEL_HEIGHT))
+pygame.display.set_caption("AI Phase 3: BFS Search on Extra Large Grid (50x40)")
 clock = pygame.time.Clock()
 
 # Calculate the path once at the beginning
 start_time = time.time()
-calculated_path = get_bfs_path(player_pos, goal_pos, GRID)
+calculated_path = get_bfs_path(player_pos, goal_pos, GRID_XLARGE)
 end_time = time.time()
 algorithm_time = end_time - start_time
 path_index = 0
@@ -51,30 +51,29 @@ while running:
     screen.fill(BG_COLOR)
     
     # Draw UI panel at the top
-    pygame.draw.rect(screen, (50, 50, 50), (0, 0, GRID_WIDTH * TILE_SIZE, PANEL_HEIGHT))
-    pygame.draw.line(screen, GRID_LINE_COLOR, (0, PANEL_HEIGHT), (GRID_WIDTH * TILE_SIZE, PANEL_HEIGHT), 2)
+    pygame.draw.rect(screen, (50, 50, 50), (0, 0, GRID_WIDTH_XLARGE * TILE_SIZE_XLARGE, PANEL_HEIGHT))
+    pygame.draw.line(screen, GRID_LINE_COLOR, (0, PANEL_HEIGHT), (GRID_WIDTH_XLARGE * TILE_SIZE_XLARGE, PANEL_HEIGHT), 2)
     
     # Display timing info in the panel
-    font = pygame.font.Font(None, 32)
+    font = pygame.font.Font(None, 28)
     timer_text = font.render(f"BFS Time: {algorithm_time:.4f}s | Path: {len(calculated_path)} steps", True, PLAYER_COLOR)
     screen.blit(timer_text, (15, 15))
     
     # Draw grid with offset for panel
-    for r in range(GRID_HEIGHT):
-        for c in range(GRID_WIDTH):
-            rect = pygame.Rect(c*TILE_SIZE, r*TILE_SIZE + PANEL_HEIGHT, TILE_SIZE, TILE_SIZE)
-            if GRID[r][c] == 1:
+    for r in range(GRID_HEIGHT_XLARGE):
+        for c in range(GRID_WIDTH_XLARGE):
+            rect = pygame.Rect(c*TILE_SIZE_XLARGE, r*TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE)
+            if GRID_XLARGE[r][c] == 1:
                 pygame.draw.rect(screen, WALL_COLOR, rect)
             pygame.draw.rect(screen, GRID_LINE_COLOR, rect, 1) # Grid lines
 
     # Draw Goal
-    pygame.draw.rect(screen, GOAL_COLOR, (goal_pos[0]*TILE_SIZE, goal_pos[1]*TILE_SIZE + PANEL_HEIGHT, TILE_SIZE, TILE_SIZE))
+    pygame.draw.rect(screen, GOAL_COLOR, (goal_pos[0]*TILE_SIZE_XLARGE, goal_pos[1]*TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE))
     
     # Draw Player
-    pygame.draw.rect(screen, PLAYER_COLOR, (player_pos[0]*TILE_SIZE, player_pos[1]*TILE_SIZE + PANEL_HEIGHT, TILE_SIZE, TILE_SIZE))
+    pygame.draw.rect(screen, PLAYER_COLOR, (player_pos[0]*TILE_SIZE_XLARGE, player_pos[1]*TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE))
 
     pygame.display.flip()
     clock.tick(FPS)
 
 pygame.quit()
-
