@@ -1,6 +1,11 @@
 import pygame
 import sys
+import os
 import time
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from config import (
     TILE_SIZE_XLARGE, GRID_WIDTH_XLARGE, GRID_HEIGHT_XLARGE,
     BG_COLOR, GRID_LINE_COLOR, WALL_COLOR, PLAYER_COLOR, GOAL_COLOR,
@@ -16,7 +21,6 @@ FPS = 30
 BFS_COLOR = (0, 150, 255)
 ASTAR_COLOR = (0, 255, 100)
 COMMON_COLOR = (255, 200, 0)
-DIFF_COLOR = (200, 50, 200)
 
 # Setup pygame
 pygame.init()
@@ -90,19 +94,22 @@ while running:
 
     # Draw frontiers (optional)
     if show_frontier:
-        bfs_visited = bfs_info.get('visited', set())
-        astar_visited = astar_info.get('visited', set())
-        for (x, y) in bfs_visited:
-            rect = pygame.Rect(x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE)
-            pygame.draw.rect(screen, (40, 80, 160), rect)
-        for (x, y) in astar_visited:
-            rect = pygame.Rect(x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE)
-            pygame.draw.rect(screen, (60, 160, 80), rect)
+        bfs_visited = set(bfs_info.get('visited', set()))
+        astar_visited = set(astar_info.get('visited', set()))
 
-    # Draw common path nodes first (so they show up as common)
-    for (x, y) in common:
-        rect = pygame.Rect(x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE)
-        pygame.draw.rect(screen, COMMON_COLOR, rect)
+        # Use semi-transparent surfaces so overlaps blend visually when blitted
+        blue_a = (40, 80, 160, 110)
+        green_a = (60, 160, 80, 110)
+        bfs_surf = pygame.Surface((TILE_SIZE_XLARGE, TILE_SIZE_XLARGE), pygame.SRCALPHA)
+        bfs_surf.fill(blue_a)
+        astar_surf = pygame.Surface((TILE_SIZE_XLARGE, TILE_SIZE_XLARGE), pygame.SRCALPHA)
+        astar_surf.fill(green_a)
+
+        # Blit BFS visited first, then A* visited so overlaps show blended color
+        for (x, y) in bfs_visited:
+            screen.blit(bfs_surf, (x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT))
+        for (x, y) in astar_visited:
+            screen.blit(astar_surf, (x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT))
 
     # Draw BFS-only nodes
     for (x, y) in only_bfs:
@@ -114,6 +121,12 @@ while running:
         rect = pygame.Rect(x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE)
         pygame.draw.rect(screen, ASTAR_COLOR, rect)
 
+    # Draw common path nodes last (final path shown in yellow) with a dark outline
+    for (x, y) in common:
+        rect = pygame.Rect(x * TILE_SIZE_XLARGE, y * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE)
+        pygame.draw.rect(screen, COMMON_COLOR, rect)
+        pygame.draw.rect(screen, (50, 40, 0), rect, 2)
+
     # Draw start and goal
     pygame.draw.rect(screen, PLAYER_COLOR, (start[0] * TILE_SIZE_XLARGE, start[1] * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE))
     pygame.draw.rect(screen, GOAL_COLOR, (goal[0] * TILE_SIZE_XLARGE, goal[1] * TILE_SIZE_XLARGE + PANEL_HEIGHT, TILE_SIZE_XLARGE, TILE_SIZE_XLARGE))
@@ -121,13 +134,33 @@ while running:
     # Legend
     legend_x = 12
     legend_y = GRID_HEIGHT_XLARGE * TILE_SIZE_XLARGE + PANEL_HEIGHT - 26
-    # (draw small boxes)
+    # Path legend
     pygame.draw.rect(screen, BFS_COLOR, (legend_x, legend_y, 16, 16))
     screen.blit(font.render("BFS-only", True, (200, 200, 200)), (legend_x + 20, legend_y))
     pygame.draw.rect(screen, ASTAR_COLOR, (legend_x + 140, legend_y, 16, 16))
     screen.blit(font.render("A*-only", True, (200, 200, 200)), (legend_x + 164, legend_y))
     pygame.draw.rect(screen, COMMON_COLOR, (legend_x + 260, legend_y, 16, 16))
-    screen.blit(font.render("Common", True, (200, 200, 200)), (legend_x + 284, legend_y))
+    screen.blit(font.render("Final path (common)", True, (200, 200, 200)), (legend_x + 284, legend_y))
+
+    # Frontier legend (semi-transparent previews)
+    f_x = legend_x + 520
+    bfs_preview = pygame.Surface((12, 12), pygame.SRCALPHA)
+    bfs_preview.fill((40, 80, 160, 150))
+    screen.blit(bfs_preview, (f_x, legend_y))
+    screen.blit(font.render("BFS visited", True, (200, 200, 200)), (f_x + 16, legend_y))
+
+    astar_preview = pygame.Surface((12, 12), pygame.SRCALPHA)
+    astar_preview.fill((60, 160, 80, 150))
+    screen.blit(astar_preview, (f_x + 160, legend_y))
+    screen.blit(font.render("A* visited", True, (200, 200, 200)), (f_x + 176, legend_y))
+
+    both_preview = pygame.Surface((12, 12), pygame.SRCALPHA)
+    both_preview.fill((40, 80, 160, 110))
+    temp = pygame.Surface((12, 12), pygame.SRCALPHA)
+    temp.fill((60, 160, 80, 110))
+    both_preview.blit(temp, (0, 0))
+    screen.blit(both_preview, (f_x + 320, legend_y))
+    screen.blit(font.render("Both visited", True, (200, 200, 200)), (f_x + 336, legend_y))
 
     pygame.display.flip()
     clock.tick(FPS)

@@ -40,10 +40,10 @@ pip install -r requirements.txt
 ### 4. Run the Simulation
 ```bash
 # To run the Phase 1 (Search Logic)
-python3 phase1_search.py
+python3 grid1_search.py
 ```
 
 ```bash
-# To run the Phase 2 (Zombie Interaction)
-python3 phase2_zombie.py
+# To run the Phase 1 (Zombie Interaction)
+python3 grid1_search_visual.py
 ```

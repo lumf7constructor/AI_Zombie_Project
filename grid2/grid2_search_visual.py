@@ -1,7 +1,11 @@
 import pygame
 import random
 import sys
+import os
 import time
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     TILE_SIZE_LARGE, GRID_WIDTH_LARGE, GRID_HEIGHT_LARGE, FPS,
     GRID_LARGE, PLAYER_START_POS_LARGE, GOAL_POS_LARGE,
@@ -18,7 +22,7 @@ SCREEN_HEIGHT = GRID_HEIGHT_LARGE * TILE_SIZE_LARGE
 PANEL_HEIGHT = 60  # Space for UI panel at the top
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + PANEL_HEIGHT))
-pygame.display.set_caption("AI Phase 2: BFS Search on Large Grid (30x30) - Visual Edition")
+pygame.display.set_caption("AI Grid 2: BFS Search on Large Grid (30x30) - Visual Edition")
 clock = pygame.time.Clock()
 
 # Grid (create mutable copy)

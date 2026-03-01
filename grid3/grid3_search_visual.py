@@ -1,7 +1,11 @@
 import pygame
 import random
 import sys
+import os
 import time
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     TILE_SIZE_XLARGE, GRID_WIDTH_XLARGE, GRID_HEIGHT_XLARGE, FPS,
     GRID_XLARGE, PLAYER_START_POS_XLARGE, GOAL_POS_XLARGE,
@@ -9,7 +13,7 @@ from config import (
     RED, DARK_RED, PURPLE, DARK_PURPLE,
     PRIZE_GOLD, DARK_GOLD
 )
-from utils import get_astar_path
+from utils import get_bfs_path
 
 pygame.init()
 
@@ -18,7 +22,7 @@ SCREEN_HEIGHT = GRID_HEIGHT_XLARGE * TILE_SIZE_XLARGE
 PANEL_HEIGHT = 60  # Space for UI panel at the top
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT + PANEL_HEIGHT))
-pygame.display.set_caption("AI Phase 3: A* Search on Extra Large Grid (50x40) - Visual Edition")
+pygame.display.set_caption("AI Grid 3: BFS Search on Extra Large Grid (50x40) - Visual Edition")
 clock = pygame.time.Clock()
 
 # Grid (create mutable copy)
@@ -121,9 +125,9 @@ def draw_prize(x, y):
     pygame.draw.polygon(screen, PRIZE_GOLD, points)
     pygame.draw.polygon(screen, DARK_GOLD, points, 1)
 
-# Calculate the path once at the beginning using A*
+# Calculate the path once at the beginning using BFS
 start_time = time.time()
-calculated_path = get_astar_path(player_pos, goal_pos, GRID_XLARGE)
+calculated_path = get_bfs_path(player_pos, goal_pos, GRID_XLARGE)
 end_time = time.time()
 algorithm_time = end_time - start_time
 path_index = 0
@@ -153,7 +157,7 @@ while running:
 
     # Display timing info in the panel
     font = pygame.font.Font(None, 28)
-    timer_text = font.render(f"A* Time: {algorithm_time:.4f}s | Path: {len(calculated_path)} steps", True, PRIZE_GOLD)
+    timer_text = font.render(f"BFS Time: {algorithm_time:.4f}s | Path: {len(calculated_path)} steps", True, PRIZE_GOLD)
     screen.blit(timer_text, (15, 15))
 
     # Draw stars
