@@ -296,3 +296,101 @@ def get_astar_path_fast(start, goal, grid=None, return_info=False):
                 visited.add((i % grid_width, i // grid_width))
         return [], {"visited": visited, "nodes_expanded": nodes_expanded, "heap_ops": heap_ops}
     return []
+
+
+def get_minimax_path(start, goal, grid=None, return_info=False, depth=10, is_maximizing=True):
+    """
+    Finds a path using depth-bounded A* (minimax-inspired bounded search).
+    Uses A* heuristic but limits search depth to simulate minimax pruning.
+    More suitable for pathfinding than true game-tree minimax.
+
+    Args:
+        start: [x, y] starting position
+        goal: [x, y] goal position
+        grid: Grid to use (defaults to GRID if not provided)
+        return_info: if True return (path, info_dict) where info_dict contains stats
+        depth: Maximum depth for search (limits exploration)
+        is_maximizing: Unused (kept for API compatibility)
+
+    Returns:
+        List of tuples representing the path from start to goal.
+        If return_info is True, returns (path, info_dict).
+    """
+    if grid is None:
+        grid = GRID
+
+    grid_width = len(grid[0]) if grid else GRID_WIDTH
+    grid_height = len(grid) if grid else GRID_HEIGHT
+
+    start_t = tuple(start)
+    goal_t = tuple(goal)
+    
+    def manhattan_distance(pos1, pos2):
+        """Calculate Manhattan distance between two positions"""
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+    # Use A* with depth limit
+    from heapq import heappush, heappop
+    
+    counter = 0
+    open_heap = []
+    g_score = {start_t: 0}
+    h0 = manhattan_distance(start_t, goal_t)
+    heappush(open_heap, (h0, counter, start_t, 0))  # (f_score, counter, node, g_score)
+    
+    came_from = {}
+    closed = set()
+    nodes_expanded = 0
+    
+    while open_heap:
+        f, _, current, g = heappop(open_heap)
+        nodes_expanded += 1
+        
+        if current in closed:
+            continue
+            
+        if current == goal_t:
+            # Reconstruct path
+            path = []
+            cur = current
+            while cur in came_from:
+                path.append(cur)
+                cur = came_from[cur]
+            path.append(start_t)
+            path.reverse()
+            if return_info:
+                return path, {"visited": closed, "nodes_expanded": nodes_expanded, "score": f}
+            return path
+
+        closed.add(current)
+        
+        # Skip if depth exceeded
+        if g >= depth:
+            continue
+
+        x, y = current
+        # Explore neighbors
+        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nx, ny = x + dx, y + dy
+            neighbor = (nx, ny)
+            
+            if 0 <= nx < grid_width and 0 <= ny < grid_height:
+                if grid[ny][nx] == 1:  # Skip walls
+                    continue
+                    
+                tentative_g = g + 1
+                
+                if neighbor in g_score and tentative_g >= g_score[neighbor]:
+                    continue
+                    
+                g_score[neighbor] = tentative_g
+                came_from[neighbor] = current
+                h = manhattan_distance(neighbor, goal_t)
+                f_neighbor = tentative_g + h
+                counter += 1
+                heappush(open_heap, (f_neighbor, counter, neighbor, tentative_g))
+
+    # No path found
+    if return_info:
+        return [], {"visited": closed, "nodes_expanded": nodes_expanded, "score": float('inf')}
+    return []
