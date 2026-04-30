@@ -1,37 +1,3 @@
-"""
-minimax_ambush_monster.py - Freeze Tag with Strategic Monster
-==============================================================
-GAME RULES
-----------
-• Prey   (blue)   uses A* to navigate toward the Reward.
-• Monster(red)    uses PREDICTIVE INTERCEPTION (minimax evaluation) to hunt.
-• Reward (yellow) is stationary.
-• Game ends when:
-    ✅  Prey reaches the Reward  -> "PREY WINS!"
-    ❌  Monster catches the Prey -> "MONSTER WINS!"
-
-THE STRATEGIC ADVANTAGE: MINIMAX INTERCEPTION
-----------------------------------------------
-Instead of blindly chasing the prey's CURRENT position, the monster analyzes
-the prey's PREDICTED PATH and uses a minimax-like evaluation function:
-
-    Score = steps_for_prey_to_reach - steps_for_monster_to_reach
-
-The monster evaluates 15 future positions along the prey's path and picks the
-one with the BEST interception score (most negative = can catch prey).
-
-KEY DIFFERENCE FROM BASELINE A*
---------------------------------
-• A* Monster (test.py):  Always chases the prey's current position
-  → Follows from behind, reactive behavior
-  → Can be fooled by maze complexity
-
-• Minimax Monster (this):  Predicts prey's future path and intercepts ahead
-  → Cuts off the prey's escape route
-  → Proactive/strategic behavior
-  → Faster catches when prey moves in straight lines
-"""
-
 import pygame
 import sys
 import os
@@ -75,8 +41,8 @@ reward_pos   = list(GOAL_POS_LARGE)
 # ==============================================================================
 #  MINIMAX PARAMETERS
 # ==============================================================================
-MONSTER_MINIMAX_DEPTH = 8  # How many moves ahead monster looks (increased for better strategy)
-PREY_LOOKAHEAD = 8  # How far the monster looks into the prey's predicted path
+PREY_MINIMAX_DEPTH = 3      # Prey looks 3 moves ahead (maximizer)
+MONSTER_MINIMAX_DEPTH = 3   # Monster looks 3 moves ahead (minimizer)
 
 # ==============================================================================
 #  SPEED CONTROLS
@@ -95,6 +61,9 @@ def tile_rect(col: int, row: int) -> pygame.Rect:
     )
 
 
+# ==============================================================================
+#  DRAWING FUNCTIONS
+# ==============================================================================
 def draw_grid(surface, grid):
     """Draw all tiles (walls + empty) with grid-lines."""
     for r in range(GRID_HEIGHT_LARGE):
@@ -144,7 +113,7 @@ def draw_reward(surface, pos):
     pygame.draw.polygon(surface, (180, 140, 0), diamond, 2)
 
 
-def draw_panel(surface, width, step, prey_dist, monster_dist, result=None, strategy=""):
+def draw_panel(surface, width, step, prey_dist, monster_dist, result=None):
     """Draw the top information panel."""
     pygame.draw.rect(surface, PANEL_BG, (0, 0, width, PANEL_HEIGHT))
     pygame.draw.line(surface, GRID_LINE_COLOR, (0, PANEL_HEIGHT), (width, PANEL_HEIGHT), 2)
@@ -160,153 +129,196 @@ def draw_panel(surface, width, step, prey_dist, monster_dist, result=None, strat
         surface.blit(txt, txt.get_rect(center=(width // 2, PANEL_HEIGHT // 2)))
         return
 
-    # ROW 1: Step and distances
-    surface.blit(font_med.render(f"Step: {step}", True, TEXT_COLOR), (10, 8))
-    dist = font_med.render(
-        f"Prey -> Reward: {prey_dist} steps     Monster -> Prey: {monster_dist} steps",
-        True, TEXT_COLOR,
-    )
-    surface.blit(dist, dist.get_rect(center=(width // 2, 16)))
+    # ROW 1: Title
+    title = font_big.render("Freeze Tag  |  Both Players use MINIMAX (Adversarial)", True, TEXT_COLOR)
+    surface.blit(title, title.get_rect(center=(width // 2, 15)))
 
-    # ROW 2: Legend
+    # ROW 2: Step count
+    step_txt = font_med.render(f"Step: {step}", True, TEXT_COLOR)
+    surface.blit(step_txt, (20, 45))
+
+    dist_txt = font_med.render(f"Distances: Prey {prey_dist}  |  Monster {monster_dist}", True, TEXT_COLOR)
+    surface.blit(dist_txt, (width - 420, 45))
+
+    # ROW 3: Legend
     dot_r = 6
-    # Prey
-    pygame.draw.circle(surface, PREY_COLOR, (14, 40), dot_r)
-    surface.blit(font_med.render("Prey (A* - blind)", True, PREY_COLOR), (24, 32))
-    # Monster
-    pygame.draw.circle(surface, MONSTER_COLOR, (width // 2 - 80, 40), dot_r)
-    surface.blit(font_med.render("Monster (MINIMAX - ambush)", True, MONSTER_COLOR),
-                 (width // 2 - 70, 32))
-    # Reward
+    pygame.draw.circle(surface, PREY_COLOR, (30, 40), dot_r)
+    surface.blit(font_med.render("Prey (Minimax - Maximizer)", True, PREY_COLOR), (46, 32))
+
+    pygame.draw.circle(surface, MONSTER_COLOR, (width // 2 - 70, 40), dot_r)
+    surface.blit(font_med.render("Monster (Minimax - Minimizer)", True, MONSTER_COLOR),
+                 (width // 2 - 60, 32))
+
     rdx = width - 110
     diamond = [(rdx+dot_r, 34), (rdx+dot_r*2, 40), (rdx+dot_r, 46), (rdx, 40)]
     pygame.draw.polygon(surface, REWARD_COLOR, diamond)
     surface.blit(font_med.render("Reward", True, REWARD_COLOR), (rdx + dot_r*2 + 4, 32))
 
-    # ROW 3: Controls
     ctrl = font_sml.render("SPACE = pause     R = restart     ESC = quit", True, (120, 120, 120))
     surface.blit(ctrl, ctrl.get_rect(center=(width // 2, 72)))
 
 
 # ==============================================================================
-#  MINIMAX EVALUATION FUNCTION FOR MONSTER
+#  EVALUATION FUNCTION (SHARED BY BOTH PLAYERS)
 # ==============================================================================
-def evaluate_board_for_monster(monster_pos, prey_pos, reward_pos):
+def evaluate_board(prey_pos, monster_pos, reward_pos):
     """
-    Simple evaluation: distance from monster to prey.
-    Monster MINIMIZES this - gets close to prey.
+    Evaluation function for adversarial minimax.
+    
+    Score = (Distance from Prey to Monster) - (Distance from Prey to Reward)
+    
+    Prey (maximizer) wants HIGH score: far from monster, close to reward
+    Monster (minimizer) wants LOW score: close to prey, prey far from reward
     """
-    dist_monster_to_prey = abs(monster_pos[0] - prey_pos[0]) + abs(monster_pos[1] - prey_pos[1])
-    return dist_monster_to_prey
+    dist_to_monster = abs(prey_pos[0] - monster_pos[0]) + abs(prey_pos[1] - monster_pos[1])
+    dist_to_reward = abs(prey_pos[0] - reward_pos[0]) + abs(prey_pos[1] - reward_pos[1])
+    
+    score = dist_to_monster - dist_to_reward
+    return score
 
 
 # ==============================================================================
-#  MINIMAX SEARCH FOR AMBUSH MONSTER
+#  MINIMAX ALGORITHM (TRUE ADVERSARIAL)
 # ==============================================================================
-def minimax_ambush_monster(monster_pos, prey_pos, reward_pos, depth, grid, prey_path_lookahead):
+_minimax_cache = {}
+
+def minimax_both_players(prey_pos, monster_pos, reward_pos, depth, is_prey_turn, grid):
     """
-    Minimax search for predatory monster.
-    Monster minimizes: (distance of prey to reward) - (distance of monster to prey)
-    Prey modeled as following A* to reward
+    True adversarial minimax with alternating turns.
+    
+    Prey (maximizer):   Picks move that maximizes score
+    Monster (minimizer): Picks move that minimizes score
     """
+    cache_key = (prey_pos, monster_pos, reward_pos, depth, is_prey_turn)
+    if cache_key in _minimax_cache:
+        return _minimax_cache[cache_key]
+    
+    # Terminal conditions
     if depth == 0:
-        score = evaluate_board_for_monster(monster_pos, prey_pos, reward_pos)
-        return [], score
+        score = evaluate_board(prey_pos, monster_pos, reward_pos)
+        result = ([], score)
+        _minimax_cache[cache_key] = result
+        return result
     
-    # Check if monster caught prey
-    if monster_pos == prey_pos:
-        return [monster_pos], float('-inf')
+    if prey_pos == tuple(reward_pos):
+        result = ([prey_pos], float('inf'))
+        _minimax_cache[cache_key] = result
+        return result
     
-    # Generate valid moves for monster
-    valid_moves = []
-    for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-        nx, ny = monster_pos[0] + dx, monster_pos[1] + dy
-        if 0 <= nx < GRID_WIDTH_LARGE and 0 <= ny < GRID_HEIGHT_LARGE:
-            if grid[ny][nx] != 1:
-                valid_moves.append((nx, ny))
+    if prey_pos == monster_pos:
+        result = ([prey_pos], float('-inf'))
+        _minimax_cache[cache_key] = result
+        return result
     
-    if not valid_moves:
-        score = evaluate_board_for_monster(monster_pos, prey_pos, reward_pos)
-        return [monster_pos], score
-    
-    best_move = None
-    best_score = float('inf')
-    
-    for move in valid_moves:
-        # Simulate prey continuing toward reward
-        # Look ahead in the prey's predicted path
-        simulated_prey = prey_pos
-        if len(prey_path_lookahead) > min(depth, PREY_LOOKAHEAD):
-            simulated_prey = prey_path_lookahead[min(depth, PREY_LOOKAHEAD)]
-        elif len(prey_path_lookahead) > 1:
-            simulated_prey = prey_path_lookahead[-1]
+    # Generate valid moves
+    if is_prey_turn:
+        valid_moves = []
+        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nx, ny = prey_pos[0] + dx, prey_pos[1] + dy
+            if 0 <= nx < GRID_WIDTH_LARGE and 0 <= ny < GRID_HEIGHT_LARGE:
+                if grid[ny][nx] != 1:
+                    valid_moves.append((nx, ny))
         
-        # Recursive call
-        _, score = minimax_ambush_monster(move, simulated_prey, reward_pos, depth - 1, grid, 
-                                         prey_path_lookahead)
+        if not valid_moves:
+            score = evaluate_board(prey_pos, monster_pos, reward_pos)
+            result = ([prey_pos], score)
+            _minimax_cache[cache_key] = result
+            return result
         
-        if score < best_score:  # Monster MINIMIZES
-            best_score = score
-            best_move = move
+        # PREY IS MAXIMIZER
+        best_move = None
+        best_score = float('-inf')
+        
+        for move in valid_moves:
+            # Prey moves, then monster responds
+            _, score = minimax_both_players(move, monster_pos, reward_pos, depth - 1, False, grid)
+            
+            if score > best_score:
+                best_score = score
+                best_move = move
+        
+        if best_move is None:
+            best_move = valid_moves[0]
+        
+        result = ([best_move], best_score)
+        _minimax_cache[cache_key] = result
+        return result
     
-    if best_move is None:
-        best_move = valid_moves[0]
-    
-    return [best_move], best_score
+    else:
+        # MONSTER'S TURN
+        valid_moves = []
+        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+            nx, ny = monster_pos[0] + dx, monster_pos[1] + dy
+            if 0 <= nx < GRID_WIDTH_LARGE and 0 <= ny < GRID_HEIGHT_LARGE:
+                if grid[ny][nx] != 1:
+                    valid_moves.append((nx, ny))
+        
+        if not valid_moves:
+            score = evaluate_board(prey_pos, monster_pos, reward_pos)
+            result = ([monster_pos], score)
+            _minimax_cache[cache_key] = result
+            return result
+        
+        # MONSTER IS MINIMIZER
+        best_move = None
+        best_score = float('inf')
+        
+        for move in valid_moves:
+            # Monster moves, then prey responds
+            _, score = minimax_both_players(prey_pos, move, reward_pos, depth - 1, True, grid)
+            
+            if score < best_score:
+                best_score = score
+                best_move = move
+        
+        if best_move is None:
+            best_move = valid_moves[0]
+        
+        result = ([best_move], best_score)
+        _minimax_cache[cache_key] = result
+        return result
 
 
-def find_ambush_monster_path(monster_pos, prey_pos, reward_pos, grid, prey_predicted_path):
-    """
-    Monster uses TRUE predictive interception with actual A* calculation.
+def find_prey_minimax_move(prey_pos, monster_pos, reward_pos, grid):
+    """Find next move for prey using minimax."""
+    _minimax_cache.clear()
+    path, _ = minimax_both_players(tuple(prey_pos), tuple(monster_pos), tuple(reward_pos),
+                                   PREY_MINIMAX_DEPTH, True, grid)
     
-    Instead of just estimating, the monster actually calculates A* distances
-    to candidate points on the prey's path and finds the EARLIEST collision point.
-    This is a true tactical advantage - the monster beats the prey to a point
-    on the prey's own path, achieving an "ambush" interception.
-    """
+    if path and len(path) > 0:
+        next_pos = path[0]
+        full_path = get_astar_path(tuple(next_pos), tuple(reward_pos), grid)
+        if full_path:
+            return [tuple(prey_pos)] + full_path
+        else:
+            return [tuple(prey_pos), next_pos]
     
-    if not prey_predicted_path or len(prey_predicted_path) < 2:
-        # Fallback to direct A* chase if no path data
-        return get_astar_path(tuple(monster_pos), tuple(prey_pos), grid)
+    return get_astar_path(tuple(prey_pos), tuple(reward_pos), grid)
+
+
+def find_monster_minimax_move(prey_pos, monster_pos, reward_pos, grid):
+    """Find next move for monster using minimax."""
+    _minimax_cache.clear()
+    path, _ = minimax_both_players(tuple(prey_pos), tuple(monster_pos), tuple(reward_pos),
+                                   MONSTER_MINIMAX_DEPTH, False, grid)
     
-    # Find the point on prey's path where monster can intercept EARLIEST
-    best_intercept = tuple(prey_predicted_path[-1])  # fallback to reward
-    best_collision_step = float('inf')
+    if path and len(path) > 0:
+        next_pos = path[0]
+        # Monster will chase towards prey
+        full_path = get_astar_path(tuple(next_pos), tuple(prey_pos), grid)
+        if full_path:
+            return [tuple(monster_pos)] + full_path
+        else:
+            return [tuple(monster_pos), next_pos]
     
-    # Sample prey's path at regular intervals (every 3 steps for efficiency)
-    sample_step = 3
-    
-    for step_idx in range(0, min(30, len(prey_predicted_path)), sample_step):
-        candidate_pos = prey_predicted_path[step_idx]
-        
-        # How many steps until prey reaches this point?
-        prey_steps_to_here = step_idx
-        
-        # How many steps for monster to reach this point? (actual A* distance)
-        monster_path = get_astar_path(
-            tuple(monster_pos), tuple(candidate_pos), grid
-        )
-        monster_steps_to_here = len(monster_path) - 1
-        
-        # Collision happens at: max(monster_steps, prey_steps)
-        # If monster arrives first, it waits. If prey arrives first, they pass through.
-        collision_step = max(monster_steps_to_here, prey_steps_to_here)
-        
-        # Pick the interception point with EARLIEST collision
-        if collision_step < best_collision_step:
-            best_collision_step = collision_step
-            best_intercept = tuple(candidate_pos)
-    
-    # Calculate path to the optimal interception point
-    path = get_astar_path(tuple(monster_pos), best_intercept, grid)
-    return path if path else [tuple(monster_pos)]
+    return get_astar_path(tuple(monster_pos), tuple(prey_pos), grid)
 
 
 # ==============================================================================
 #  GAME STATE
 # ==============================================================================
-class AmbushMonsterGame:
-    """Game with A* prey and minimax ambush monster."""
+class BothPlayersMinimaxGame:
+    """Game with both prey and monster using adversarial minimax."""
 
     def __init__(self):
         self.reset()
@@ -322,16 +334,13 @@ class AmbushMonsterGame:
         self._update_paths()
 
     def _update_paths(self):
-        """Update both agents' paths."""
-        # Prey using simple A*
-        self.prey_path = get_astar_path(
-            tuple(self.prey_pos), tuple(reward_pos), GRID_LARGE
-        )
+        """Update both agents' paths using minimax."""
+        # Prey using minimax (maximizer)
+        prey_next = find_prey_minimax_move(self.prey_pos, self.monster_pos, reward_pos, GRID_LARGE)
+        self.prey_path = prey_next if prey_next else [self.prey_pos]
 
-        # Monster using minimax with knowledge of prey's likely path
-        monster_next = find_ambush_monster_path(
-            self.monster_pos, self.prey_pos, reward_pos, GRID_LARGE, self.prey_path
-        )
+        # Monster using minimax (minimizer)
+        monster_next = find_monster_minimax_move(self.prey_pos, self.monster_pos, reward_pos, GRID_LARGE)
         self.monster_path = monster_next if monster_next else [self.monster_pos]
 
     def tick(self):
@@ -384,10 +393,10 @@ def main():
     W = GRID_WIDTH_LARGE  * TILE_SIZE_LARGE
     H = GRID_HEIGHT_LARGE * TILE_SIZE_LARGE + PANEL_HEIGHT
     screen = pygame.display.set_mode((W, H))
-    pygame.display.set_caption("Freeze Tag  |  Prey (A*) vs Monster (MINIMAX - Ambush)")
+    pygame.display.set_caption("Freeze Tag  |  Both Players (MINIMAX - Adversarial)")
     clock  = pygame.time.Clock()
 
-    game         = AmbushMonsterGame()
+    game         = BothPlayersMinimaxGame()
     frame_count  = 0
     end_display  = None
 
