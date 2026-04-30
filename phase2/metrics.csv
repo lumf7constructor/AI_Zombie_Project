@@ -1,0 +1,5 @@
+Scenario,Winner,Steps,Computation_Time_s,Prey_Path_Length,Monster_Path_Length,Prey_Nodes_Expanded,Monster_Nodes_Expanded,Total_Nodes_Expanded,Total_Pathfinding_Calls
+Both MINIMAX (d=60),monster,37,0.059266,1369,933,9392,5292,14684,74
+Ambush Monster,monster,51,0.050055,1530,33,1530,2623,4153,102
+Both MINIMAX (d=3),TIMEOUT,500,0.044131,0,0,8500,8500,17000,1000
+Evasive Prey,monster,54,0.044265,0,1539,594,1539,2133,108
