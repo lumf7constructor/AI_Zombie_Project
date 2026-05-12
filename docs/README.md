@@ -5,6 +5,7 @@ An AI simulation project exploring pathfinding algorithms and adversarial agent 
 ## 🚀 Project Phases
 - **Phase 1:** Survivor uses **Breadth-First Search (BFS)** to find the shortest path to supplies.
 - **Phase 2:** Introduces an **Adversarial Zombie** that uses a **Greedy Heuristic (Manhattan Distance)** to hunt the survivor.
+- **Phase 3:** The survivor uses an embedded **Prolog** reasoning engine to logically evaluate its environment and decide actions — fleeing the zombie while navigating toward the goal.
 
 ---
 
