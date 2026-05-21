@@ -104,65 +104,65 @@ while running:
 
 pygame.quit()
 
-# --- Save Static Search Footprint Visualization ---
-if MATPLOTLIB_AVAILABLE:
-    try:
-        # Create side-by-side visualization: left = explored, right = metrics
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+# # --- Save Static Search Footprint Visualization ---
+# if MATPLOTLIB_AVAILABLE:
+#     try:
+#         # Create side-by-side visualization: left = explored, right = metrics
+#         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
         
-        # Left: Explored nodes visualization
-        explored_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH, 3), dtype=np.uint8)
-        # Start with grid (black for empty, dark gray for walls)
-        for r in range(GRID_HEIGHT):
-            for c in range(GRID_WIDTH):
-                if GRID[r][c] == 1:
-                    explored_grid[r, c] = [50, 50, 50]  # Dark gray for walls
-                else:
-                    explored_grid[r, c] = [255, 255, 255]  # White for empty
+#         # Left: Explored nodes visualization
+#         explored_grid = np.zeros((GRID_HEIGHT, GRID_WIDTH, 3), dtype=np.uint8)
+#         # Start with grid (black for empty, dark gray for walls)
+#         for r in range(GRID_HEIGHT):
+#             for c in range(GRID_WIDTH):
+#                 if GRID[r][c] == 1:
+#                     explored_grid[r, c] = [50, 50, 50]  # Dark gray for walls
+#                 else:
+#                     explored_grid[r, c] = [255, 255, 255]  # White for empty
         
-        # Color explored nodes light green (lighter than BFS blue to differentiate)
-        for (x, y) in visited_set:
-            if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
-                explored_grid[y, x] = [200, 230, 180]  # Light green
+#         # Color explored nodes light green (lighter than BFS blue to differentiate)
+#         for (x, y) in visited_set:
+#             if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
+#                 explored_grid[y, x] = [200, 230, 180]  # Light green
         
-        # Highlight path in bright yellow
-        path_set = set(calculated_path)
-        for (x, y) in path_set:
-            if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
-                explored_grid[y, x] = [255, 255, 0]  # Bright yellow
+#         # Highlight path in bright yellow
+#         path_set = set(calculated_path)
+#         for (x, y) in path_set:
+#             if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
+#                 explored_grid[y, x] = [255, 255, 0]  # Bright yellow
         
-        # Mark start and goal
-        sx, sy = int(player_pos[0]), int(player_pos[1])
-        gx, gy = int(goal_pos[0]), int(goal_pos[1])
-        if 0 <= sx < GRID_WIDTH and 0 <= sy < GRID_HEIGHT:
-            explored_grid[sy, sx] = [0, 255, 0]  # Green for start
-        if 0 <= gx < GRID_WIDTH and 0 <= gy < GRID_HEIGHT:
-            explored_grid[gy, gx] = [255, 0, 0]  # Red for goal
+#         # Mark start and goal
+#         sx, sy = int(player_pos[0]), int(player_pos[1])
+#         gx, gy = int(goal_pos[0]), int(goal_pos[1])
+#         if 0 <= sx < GRID_WIDTH and 0 <= sy < GRID_HEIGHT:
+#             explored_grid[sy, sx] = [0, 255, 0]  # Green for start
+#         if 0 <= gx < GRID_WIDTH and 0 <= gy < GRID_HEIGHT:
+#             explored_grid[gy, gx] = [255, 0, 0]  # Red for goal
         
-        ax1.imshow(explored_grid)
-        ax1.set_title("A*: Explored Nodes (Light Green) & Path (Yellow)")
-        ax1.axis('off')
+#         ax1.imshow(explored_grid)
+#         ax1.set_title("A*: Explored Nodes (Light Green) & Path (Yellow)")
+#         ax1.axis('off')
         
-        # Right: Metrics scorecard
-        ax2.axis('off')
-        metrics_text = f"""
-A* Search Metrics
-{'='*40}
+#         # Right: Metrics scorecard
+#         ax2.axis('off')
+#         metrics_text = f"""
+# A* Search Metrics
+# {'='*40}
 
-Path Length: {path_length} steps
-Nodes Explored: {nodes_explored}
-Execution Time: {algorithm_time:.6f} seconds
+# Path Length: {path_length} steps
+# Nodes Explored: {nodes_explored}
+# Execution Time: {algorithm_time:.6f} seconds
 
-Efficiency: {(path_length / max(1, nodes_explored) * 100):.2f}%
-        """
-        ax2.text(0.1, 0.5, metrics_text, fontsize=12, family='monospace',
-                verticalalignment='center', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
+# Efficiency: {(path_length / max(1, nodes_explored) * 100):.2f}%
+#         """
+#         ax2.text(0.1, 0.5, metrics_text, fontsize=12, family='monospace',
+#                 verticalalignment='center', bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
         
-        plt.tight_layout()
-        plt.savefig('/home/lum/AI_Zombie_Project/grid1_astar_footprint.png', dpi=100, bbox_inches='tight')
-        print("Saved: grid1_astar_footprint.png")
-        plt.close()
-    except Exception as e:
-        print(f"Could not save matplotlib visualization: {e}")
-else:
-    print("Matplotlib not available - skipping static visualization")
+#         plt.tight_layout()
+#         plt.savefig('/home/lum/AI_Zombie_Project/grid1_astar_footprint.png', dpi=100, bbox_inches='tight')
+#         print("Saved: grid1_astar_footprint.png")
+#         plt.close()
+#     except Exception as e:
+#         print(f"Could not save matplotlib visualization: {e}")
+# else:
+#     print("Matplotlib not available - skipping static visualization")
